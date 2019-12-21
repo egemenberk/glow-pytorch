@@ -18,16 +18,32 @@ def _find_images_and_annotation(root_dir):
     images = {}
     attr = None
     assert os.path.exists(root_dir), "{} not exists".format(root_dir)
+    train_annot = loadmat(
+        root_dir +'/cars_train_annos.mat'
+        )['annotations'][0]
+    test_annot = loadmat(
+        root_dir +'/cars_test_annos_withlabels.mat'
+        )['annotations'][0]
+
     for root, _, fnames in sorted(os.walk(root_dir)):
         for fname in sorted(fnames):
             if _is_image(fname):
                 path = os.path.join(root, fname)
                 index = int(os.path.splitext(fname)[0])-1
+
                 if 'cars_test' in path:
+                    label = test_annot[index][4][0][0]
                     index += 8144
+                else:
+                    label = train_annot[index][4][0][0]
+                
+                onehot = [0 if i != label-1 else 1 for i in range(196)]
+                # Onehot is not used while training, it is only used
+                # with infer_car.py after the training to generate z_params
+                # for each class
                 images[index] = {
                     "path": path,
-                    "attr": True
+                    "attr": onehot,
                 }
             elif fname.lower() == ATTR_ANNO:
                 attr = os.path.join(root, fname)
