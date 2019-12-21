@@ -76,6 +76,8 @@ class Trainer(object):
         self.graph.train()
         self.global_step = self.loaded_step
         # begin to train
+
+        ma = []
         for epoch in range(self.n_epoches):
             print("epoch", epoch)
             progress = tqdm(self.data_loader)
@@ -116,6 +118,13 @@ class Trainer(object):
 
                 # loss
                 loss_generative = Glow.loss_generative(nll)
+                ma.append(loss_generative.item())
+                if len(ma) > 20:
+                    ma = ma[1:]
+
+                if not i_batch % 10:
+                    print(np.mean(ma))
+
                 loss_classes = 0
                 if self.y_condition:
                     loss_classes = (Glow.loss_multi_classes(y_logits, y_onehot)

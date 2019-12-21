@@ -13,7 +13,9 @@ from docopt import docopt
 from torchvision import transforms
 from glow.builder import build
 from glow.config import JsonConfig
-
+import imageio
+from tqdm import tqdm
+from datetime import datetime
 
 def select_index(name, l, r, description=None):
     index = None
@@ -42,15 +44,45 @@ def run_z(graph, z):
     img = cv2.resize(img, (256, 256))
     return img
 
+def save_image(img, name):
+    img = (np.clip(img, 0, 1) * 255).astype(np.uint8)
+    cv2.imwrite("pictures/infer/{}.png".format(name), img)
+    cv2.imshow("img", img)
+    while 1:
+        if cv2.waitKey(33):
+            break
 
 def save_images(images, names):
     if not os.path.exists("pictures/infer/"):
         os.makedirs("pictures/infer/")
     for img, name in zip(images, names):
-        img = (np.clip(img, 0, 1) * 255).astype(np.uint8)
-        cv2.imwrite("pictures/infer/{}.png".format(name), img)
-        cv2.imshow("img", img)
-        cv2.waitKey()
+        save_image(img, name)
+
+def interact():
+    while 1:
+        print('What do you want?')
+        print()
+        print('1: To interpolate between two images press')
+        print('2: To convert a car image to another car model press')
+        choice = int(input())
+        if choice == 1:
+            base_index = select_index("base image", 0, len(dataset))
+            sec_index = select_index("base image", 0, len(dataset))
+            # Encode and decode the original image to see that
+            # The model mimics the original image that is
+            # The generator fools the discriminator    
+            z_base = graph.generate_z(dataset[base_index]["x"])
+            save_image(run_z(graph, z_base), 'encoded_' + str(base_index) + str(datetime.now()))
+
+            z_base = graph.generate_z(dataset[base_index]["x"])
+            z_delta = graph.generate_z(dataset[sec_index]["x"])
+            return base_index, z_base, sec_index, z_delta
+        elif choice == 2:
+            base_index = select_index("base image", 0, len(dataset))
+            attr_index = select_index("attritube", 0, len(delta_Z), dataset.attrs)
+            z_base = graph.generate_z(dataset[base_index]["x"])
+            z_delta = delta_Z[attr_index]
+            return base_index, z_base, attr_index, z_delta
 
 
 if __name__ == "__main__":
@@ -101,23 +133,30 @@ if __name__ == "__main__":
         print("Finish generating")
 
     # interact with user
-    base_index = select_index("base image", 0, len(dataset))
-    attr_index = select_index("attritube", 0, len(delta_Z), dataset.attrs)
-    attr_name = dataset.attrs[attr_index]
-    z_delta = delta_Z[attr_index]
-    graph.eval()
-    z_base = graph.generate_z(dataset[base_index]["x"])
+    base_index, z_base, attr_index, z_delta = interact()
+
     # begin to generate new image
+    graph.eval()
     images = []
     names = []
     images.append(run_z(graph, z_base))
     names.append("reconstruct_origin")
-    interplate_n = 5
-    for i in range(0, interplate_n+1):
+    interplate_n = 100
+
+    for i in tqdm(range(0, interplate_n+1)):
         d = z_delta * float(i) / float(interplate_n)
-        images.append(run_z(graph, z_base + d))
-        names.append("attr_{}_{}".format(attr_name, interplate_n + i))
-        if i > 0:
-            images.append(run_z(graph, z_base - d))
-            names.append("attr_{}_{}".format(attr_name, interplate_n - i))
-    save_images(images, names)
+        img = (np.clip(run_z(graph, z_base + d), 0, 1) * 255).astype(np.uint8)
+        images.append(img)
+        names.append("attr_{}_{}".format('RAMBO', interplate_n + i))
+
+    imageio.mimsave(
+        'pictures/infer/first_' 
+        + str(base_index) 
+        + '_second_' 
+        + str(attr_index) 
+        + '_date: '
+        + str(datetime.now())
+        + '.gif',
+        images
+    )
+    #save_images(images, names)

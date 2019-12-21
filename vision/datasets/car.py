@@ -30,7 +30,6 @@ def _find_images_and_annotation(root_dir):
             if _is_image(fname):
                 path = os.path.join(root, fname)
                 index = int(os.path.splitext(fname)[0])-1
-
                 if 'cars_test' in path:
                     label = test_annot[index][4][0][0]
                     index += 8144
