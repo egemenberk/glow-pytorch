@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # set transform of dataset
     transform = transforms.Compose([
         #transforms.CenterCrop(hparams.Data.center_crop),
-        transforms.Resize(hparams.Data.resize),
+        transforms.Resize((hparams.Data.resize,hparams.Data.resize)),
         transforms.ToTensor()])
     # build graph and dataset
     built = build(hparams, True)

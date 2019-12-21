@@ -47,7 +47,7 @@
         "max_grad_clip": 5,
         "max_grad_norm": 100,
         "max_checkpoints": 20,
-        "checkpoints_gap": 5000,
+        "checkpoints_gap": 500,
         "num_plot_samples": 1,
         "scalar_log_gap": 50,
         "plot_gap": 50,
